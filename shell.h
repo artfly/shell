@@ -16,6 +16,7 @@ struct command {
 #include <setjmp.h>
 #include <unistd.h>
 #include <wait.h>
+#include <termios.h>
 #include "queue.h"
 #include "job_control.h"
 
@@ -25,6 +26,8 @@ struct command {
 #define FORK_FAILURE 3
 #define OUTPIP  01
 #define INPIP   02
+#define STDIN 0
+#define STDOUT 1
 
 
 extern struct command cmds[];
