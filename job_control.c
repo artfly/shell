@@ -30,21 +30,28 @@ void bg (int job, queue_t q) {
 	if (pid < 0) {
 		return;
 	}	
-	kill (pid, SIGCONT);
+	killpg (pid, SIGCONT);
 }
 
 void fg (int job, queue_t q) {
-	static siginfo_t infop;
+	siginfo_t infop;
 	pid_t pid = get(job, q);
-	if (pid < 0) {
-		return;
-	}
 	tcsetpgrp(0, pid);
-	kill (pid, SIGCONT);
-	waitid (P_PID, pid, &infop, WEXITED | WSTOPPED);
+	killpg (pid, SIGCONT);
+	while (waitid (P_PGID, pid, &infop, WEXITED | WSTOPPED) != 0);
 	if (infop.si_code == CLD_STOPPED) {
-		tcsetpgrp(0, getpid());
 		push (pid, q);
 	}
 	tcsetpgrp(0, getpid());
+}
+
+void wait_proc(int i, queue_t q, int pid, int pipe_pid) {
+	siginfo_t infop;
+	printf("Here!!\n");
+	if (!(cmds[i].cmdflag & OUTPIP)) {
+		waitid (P_PID, pid, &infop, WEXITED | WSTOPPED);
+		if (infop.si_code == CLD_STOPPED) {
+			push (getpgid(pid), q);
+		}
+	}
 }

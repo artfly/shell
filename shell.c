@@ -9,28 +9,25 @@ void handler (int sig);
 
 
 int main(int argc, char *argv[]) {
+	int pipes[MAXCMDS - 1][2];
+	pid_t pipe_pid;
 	queue_t q = malloc (sizeof(queue_t));
 	init(q);
-	register int i;
+	int i;
 	int oldfd; 
-	char line[1024];      /*  allow large command lines  */
+	char line[1024];      
 	int ncmds;
-	char prompt[50];      /* shell prompt */
-
-	static siginfo_t infop;
- 
-    sprintf(prompt,"[%s] ", argv[0]);
-
-    struct sigaction act;
-    act.sa_handler = SIG_IGN;
-    struct sigaction dfl_act;
+	char prompt[50];     
+	siginfo_t infop;
+	act.sa_handler = SIG_IGN;
 	dfl_act.sa_handler = SIG_DFL;
+	sigaction (SIGTTOU, &act, NULL);
 	tcsetpgrp(0, getpid());
-  
-    while (promptline(prompt, line, sizeof(line)) > 0) {    /*until eof  */
+
+    sprintf(prompt,"[%s] ", argv[0]); 
+    while (promptline(prompt, line, sizeof(line)) > 0) {    
 		if ((ncmds = parseline(line)) <= 0)
-			continue;   /* read next line */
-	
+			continue;   
 	    #ifdef DEBUG 
 	    {
 	    	int i, j;
@@ -46,72 +43,46 @@ int main(int argc, char *argv[]) {
 
 		for (i = 0; i < ncmds; i++) {
 		 	sigaction (SIGTTOU, &act, NULL);
+		 	if (check_if_fg_or_bg(cmds[i], q)) {
+				break;
+			}
+			if (!create_pipe(i, pipes)) {
+				break;
+			}
 			pid_t pid;
 			while (waitpid(-1, (int *)0, WNOHANG) > 0);
-			if (check_if_fg_or_bg(cmds[i], q)) {
-				continue;
-			}
-
+			/*CHILD*/
 			if (((pid = fork()) == 0)) {
+				set_group(i, pid, pipe_pid);				
 				if (bkgrnd) {
-					setpgid(0, 0);
+					set_bg_actions ();
 				}
-				else {
-					sigaction (SIGTTOU, &act, NULL);
-					setpgid(0,0);
-					tcsetpgrp(0, getpid());
-					sigaction (SIGTTOU, &dfl_act, NULL);
-				}
-				if (outfile && i == ncmds - 1) {
-					if ((oldfd = open(outfile, O_WRONLY | O_CREAT | O_TRUNC, 0644)) == -1) {
-						perror(outfile);
-						exit(EXIT_CODE);
-					}
-					dup2(oldfd, STDOUT);
-					close(oldfd);
-				}
-				else if (appfile && i == ncmds - 1) {
-					if ((oldfd = open(appfile, O_WRONLY | O_APPEND | O_CREAT, 0600)) == -1) {
-						perror(appfile);
-						exit(EXIT_CODE);
-					}
-					dup2(oldfd, STDOUT);
-					close(oldfd);
-				}
+				redirect (i, ncmds);
+				set_pipe(i, pipes);
 
-				if (infile && i == 0) {
-					if ((oldfd = open(infile, O_RDONLY)) == -1) {
-						perror(infile);
-						exit(EXIT_CODE);
-					}
-					dup2(oldfd, STDIN);
-					close(oldfd);
-				}
-
-				sigaction (SIGTTOU, &dfl_act, NULL);
+				sigaction (SIGTTOU, &dfl_act, NULL);	
 				execvp(cmds[i].cmdargs[0], cmds[i].cmdargs);
 				fprintf(stderr, "shell: %s : command not found\n", cmds[i].cmdargs[0]);
 				exit (EXEC_FAILURE);
 			}
+			/*PARENT*/
 			else {
-				if (bkgrnd) {
-					sigaction (SIGINT, &act, NULL);
-					sigaction (SIGQUIT, &act, NULL);
-					setpgid(pid, pid);
-					push (pid, q);
+				setpgid (pid, pid);
+				close_pipe(i, pipes);
+				if (i == 0 && (cmds[i].cmdflag & OUTPIP)) {
+					pipe_pid = pid;
 				}
-				else {
-					setpgid(pid, pid);
-					waitid (P_PID, pid, &infop, WEXITED | WSTOPPED);
-					sigaction (SIGTTOU, &act, NULL);
-					if (infop.si_code == CLD_STOPPED) {
-						tcsetpgrp(0, getpid());
+				if (bkgrnd) {
+					if(!(cmds[i].cmdflag & INPIP)) {
 						push (pid, q);
 					}
-					tcsetpgrp(0, getpid());
 				}
-
+				else {
+					wait_proc(i, q, pid, pipe_pid);
+				}
 			}
+			//sigaction (SIGTTOU, &act, NULL);
+			tcsetpgrp(0, getpid());
 		}
 	} 
  	exit (0);
@@ -126,10 +97,4 @@ void handler (int sig) {
 		tcsetpgrp(0, getpid());
 		fprintf(stderr, "%d\n", getpid());
 	}
-	/*if (sig == SIGQUIT) {
-		fprintf(stderr, "There are stopped jobs.\n");
-		struct sigaction dfl_act;
-		dfl_act.sa_handler = SIG_DFL;
-		sigaction(SIGQUIT, &dfl_act, NULL);
-	}*/
 }

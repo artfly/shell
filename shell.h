@@ -2,6 +2,7 @@
 #define SHELL_H
 
 #define MAXARGS 256
+#define MAXCMDS 50
 
 struct command {
     char *cmdargs[MAXARGS];
@@ -18,9 +19,12 @@ struct command {
 #include <wait.h>
 #include <termios.h>
 #include "queue.h"
+#include "groups.h"
 #include "job_control.h"
+#include "redirection.h"
+#include "pipes.h"
 
-#define MAXCMDS 50
+
 #define EXIT_CODE 1
 #define EXEC_FAILURE 2
 #define FORK_FAILURE 3
