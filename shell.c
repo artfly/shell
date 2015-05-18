@@ -22,6 +22,7 @@ int main(int argc, char *argv[]) {
 	act.sa_handler = SIG_IGN;
 	dfl_act.sa_handler = SIG_DFL;
 	sigaction (SIGTTOU, &act, NULL);
+	sigaction (SIGINT, &act, NULL);
 	tcsetpgrp(0, getpid());
 
     sprintf(prompt,"[%s] ", argv[0]); 
@@ -60,7 +61,8 @@ int main(int argc, char *argv[]) {
 				redirect (i, ncmds);
 				set_pipe(i, pipes);
 
-				sigaction (SIGTTOU, &dfl_act, NULL);	
+				sigaction (SIGTTOU, &dfl_act, NULL);
+				sigaction (SIGINT, &dfl_act, NULL);	
 				execvp(cmds[i].cmdargs[0], cmds[i].cmdargs);
 				fprintf(stderr, "shell: %s : command not found\n", cmds[i].cmdargs[0]);
 				exit (EXEC_FAILURE);
@@ -81,7 +83,6 @@ int main(int argc, char *argv[]) {
 					wait_proc(i, q, pid, pipe_pid);
 				}
 			}
-			//sigaction (SIGTTOU, &act, NULL);
 			tcsetpgrp(0, getpid());
 		}
 	} 

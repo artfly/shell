@@ -1,5 +1,11 @@
 #include "redirection.h"
 
+void check_for_pipe (int ncmds) {
+	if (outfile || infile || appfile) {
+		redirect (ncmds - 1, ncmds);
+	}
+}
+
 void redirect (int i, int ncmds) {
 	if (outfile && i == ncmds - 1) {
 		duplicate (outfile, STDOUT, WRITE);

@@ -13,12 +13,11 @@ int parseline(char * line) {
     register int i;
     static char delim[] = " \t|&<>;\n";
 
-     /* initialize  */
     bkgrnd = nargs = ncmds = rval = 0;
     s = line;
     infile = outfile = appfile = (char *) NULL;
     cmds[0].cmdargs[0] = (char *) NULL;
-    for (i = 0; i < MAXCMDS; i++)
+    for (i = 0; i < MAXCMDS; i++) 
         cmds[i].cmdflag = 0;
 
      while (*s) {        /* until line has been parsed */

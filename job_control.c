@@ -37,17 +37,18 @@ void fg (int job, queue_t q) {
 	siginfo_t infop;
 	pid_t pid = get(job, q);
 	tcsetpgrp(0, pid);
+	sigaction (SIGINT, &dfl_act, 0);
 	killpg (pid, SIGCONT);
 	while (waitid (P_PGID, pid, &infop, WEXITED | WSTOPPED) != 0);
 	if (infop.si_code == CLD_STOPPED) {
 		push (pid, q);
 	}
 	tcsetpgrp(0, getpid());
+	sigaction (SIGINT, &act, 0);
 }
 
 void wait_proc(int i, queue_t q, int pid, int pipe_pid) {
 	siginfo_t infop;
-	printf("Here!!\n");
 	if (!(cmds[i].cmdflag & OUTPIP)) {
 		waitid (P_PID, pid, &infop, WEXITED | WSTOPPED);
 		if (infop.si_code == CLD_STOPPED) {

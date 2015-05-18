@@ -10,6 +10,6 @@ typedef enum Mode Mode;
 
 void redirect (int i, int ncmds);
 void duplicate (char * file, int newfd, Mode mode);
-
+void check_for_pipe (int ncmds);
 
 #endif

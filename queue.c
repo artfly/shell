@@ -25,6 +25,15 @@
 		return q->jobs[q->last];
 	}
 
+	// void pop_if_nedeed (pid_t pid, queue_t q) {
+	// 	int i = 0;
+	// 	for (i = 0; i < last; i++) {
+	// 		if (q->jobs[i] == pid) {
+	// 			shift_queue (i, q);
+	// 		}
+	// 	}
+	// }
+
 	void shift_queue (int from, queue_t q) {
 		int i = 0;
 		for (i = from + 1; i < q->last; i++) {
